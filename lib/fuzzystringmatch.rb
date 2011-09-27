@@ -27,7 +27,28 @@ module FuzzyStringMatch
       end
     end
   end
+  
+  class Bitap
+    def create(type = :native)
+      case type
+      when :pure
+        BitapPure.new
+      when :native
+        BitapNative.new
+      end
+    end
+  end
 
+  class Levenshtein
+    def create(type = :native)
+      case type
+      when :pure
+        LevenshteinPure.new
+      when :native
+        LevenshteinNative.new
+      end
+    end
+  end
   class JaroWinklerPure
     THRESHOLD = 0.7
 
@@ -107,6 +128,12 @@ module FuzzyStringMatch
     end
   end
 
+  class BitapPure
+  end
+
+  class LevenshteinPure
+  end
+  
   require 'inline'
   class JaroWinklerNative
     inline do |builder|
@@ -198,4 +225,113 @@ double getDistance( char *s1, char *s2 )
     end
   end
 
+  class BitapNative
+    inline :C do |builder|
+      builder.include '<stdlib.h>'
+      builder.include '<string.h>'
+      builder.include '<limits.h>'
+      builder.c "const char *search(const char *text, const char *pattern, int k)
+       {
+           const char *failure = 'Failed';
+           const char *result = NULL;
+           int m = strlen(pattern);
+           unsigned long *R;
+           unsigned long pattern_mask[CHAR_MAX+1];
+           int i, d;
+           if (pattern[0] == '\0') return text;
+           if (m > 31) return \"The pattern is too long!\";
+           /* Initialize the bit array R */
+           R = malloc((k+1) * sizeof *R);
+           for (i=0; i <= k; ++i)
+               R[i] = ~1;
+           /* Initialize the pattern bitmasks */
+           for (i=0; i <= CHAR_MAX; ++i)
+               pattern_mask[i] = ~0;
+           for (i=0; i < m; ++i)
+               pattern_mask[pattern[i]] &= ~(1UL << i);
+
+           for (i=0; text[i] != '\0'; ++i) {
+               /* Update the bit arrays */
+               unsigned long old_Rd1 = R[0];
+
+               R[0] |= pattern_mask[text[i]];
+               R[0] <<= 1;
+
+               for (d=1; d <= k; ++d) {
+                   unsigned long tmp = R[d];
+                   /* Substitution is all we care about */
+                   R[d] = (old_Rd1 & (R[d] | pattern_mask[text[i]])) << 1;
+                   old_Rd1 = tmp;
+               }
+
+               if (0 == (R[k] & (1UL << m))) {
+                   result = (text+i - m) + 1;
+                   break;
+               }
+           }
+           free(R);
+           if(result == NULL)
+             result = \"No matches found\";
+           return result;
+       }"
+    end
+  end
+  
+  class LevenshteinNative
+    inline :C do |build|
+      build.include '<stdlib.h>'
+      build.include '<string.h>'
+      build.c '
+      int search(char *s,char*t);
+      int minimum(int a,int b,int c);
+
+      int search(char *s,char*t)
+      /*Compute levenshtein distance between s and t*/
+      {
+        //Step 1
+        int k,i,j,n,m,cost,*d,distance;
+        n=strlen(s); 
+        m=strlen(t);
+        if(n!=0&&m!=0)
+        {
+          d=malloc((sizeof(int))*(m+1)*(n+1));
+          m++;
+          n++;
+          //Step 2	
+          for(k=0;k<n;k++)
+      	d[k]=k;
+          for(k=0;k<m;k++)
+            d[k*n]=k;
+          //Step 3 and 4	
+          for(i=1;i<n;i++)
+            for(j=1;j<m;j++)
+      	{
+              //Step 5
+              if(s[i-1]==t[j-1])
+                cost=0;
+              else
+                cost=1;
+              //Step 6			 
+              d[j*n+i]=minimum(d[(j-1)*n+i]+1,d[j*n+i-1]+1,d[(j-1)*n+i-1]+cost);
+            }
+          distance=d[n*m-1];
+          free(d);
+          return distance;
+        }
+        else 
+          return -1; //a negative return value means that one or both strings are empty.
+      }
+
+      int minimum(int a,int b,int c)
+      /*Gets the minimum of three values*/
+      {
+        int min=a;
+        if(b<min)
+          min=b;
+        if(c<min)
+          min=c;
+        return min;
+      }'
+    end
+  end
 end
