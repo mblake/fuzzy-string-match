@@ -271,7 +271,9 @@ double getDistance( char *s1, char *s2 )
            }
            free(R);
            if(result == NULL)
-             result = \"No matches found\";
+             result = \"0\";
+           else
+             result = \"1\";
            return result;
        }"
     end
