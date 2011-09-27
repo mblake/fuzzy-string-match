@@ -20,10 +20,10 @@ module FuzzyStringMatch
   class JaroWinkler
     def create( type = :pure )     # factory method
       case type
-      when :pure
-        JaroWinklerPure.new
       when :native
         JaroWinklerNative.new
+      when :pure
+        JaroWinklerPure.new
       end
     end
   end
@@ -31,10 +31,10 @@ module FuzzyStringMatch
   class Bitap
     def create(type = :native)
       case type
-      when :pure
-        BitapPure.new
       when :native
         BitapNative.new
+      when :pure
+        BitapPure.new
       end
     end
   end
@@ -42,13 +42,26 @@ module FuzzyStringMatch
   class Levenshtein
     def create(type = :native)
       case type
+      when :native
+          LevenshteinNative.new
       when :pure
         LevenshteinPure.new
+      end
+
+    end
+  end
+  
+  class Ngram
+    def create( type = :native )
+      case type
       when :native
-        LevenshteinNative.new
+        NgramNative.new
+      when :pure
+        NgramPure.new
       end
     end
   end
+  
   class JaroWinklerPure
     THRESHOLD = 0.7
 
@@ -334,6 +347,16 @@ double getDistance( char *s1, char *s2 )
           min=c;
         return min;
       }'
+    end
+  end
+  
+  class NgramNative
+    inline do |builder|
+      builder.c '
+      const double *getSimilarity(const char *termOne, const char *termTwo, const int *n){
+        
+      }
+      '
     end
   end
 end
