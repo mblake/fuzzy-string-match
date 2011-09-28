@@ -369,6 +369,18 @@ double getDistance( char *s1, char *s2 )
         return sim;
       }
       
+      int common(result[] one, result[] two){
+        int res = 0;
+        
+        for(x = 0; x < sizeof(one); x++)
+          {
+            for(x = 0; x < sizeof(two); x++)
+              {
+                
+              }
+          }
+      }
+      
       '
     end
   end
