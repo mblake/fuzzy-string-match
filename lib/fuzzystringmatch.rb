@@ -352,10 +352,23 @@ double getDistance( char *s1, char *s2 )
   
   class NgramNative
     inline do |builder|
+      builder.include '<ctypes.h>'
       builder.c '
+      
+      struct result{
+        char theWord;
+        int theCount;
+      };
+      
       const double *getSimilarity(const char *termOne, const char *termTwo, const int *n){
-        
+        result[] res1 = NULL;
+        result[] res2 = NULL;
+        int c = common(res1, res2);
+        int u = union(res1, res2);
+        double sim = (double) c / (double) u;
+        return sim;
       }
+      
       '
     end
   end
