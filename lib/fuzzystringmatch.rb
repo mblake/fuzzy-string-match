@@ -351,36 +351,205 @@ double getDistance( char *s1, char *s2 )
   end
   
   class NgramNative
-    inline do |builder|
-      builder.include '<ctypes.h>'
-      builder.c '
-      
-      struct result{
-        char theWord;
-        int theCount;
-      };
-      
-      const double *getSimilarity(const char *termOne, const char *termTwo, const int *n){
-        result[] res1 = NULL;
-        result[] res2 = NULL;
-        int c = common(res1, res2);
-        int u = union(res1, res2);
-        double sim = (double) c / (double) u;
-        return sim;
+    inline :C do |builder|
+      #builder.include '<ctypes.h>'
+      builder.include '<stdlib.h>'
+      builder.include '<string.h>'
+      builder.include '<math.h>'
+      builder.c_raw '
+      #include <stdio.h>
+      #include <math.h>
+      #include <string.h>
+      #include <strings.h>
+      #include <stdlib.h>
+
+      typedef struct{
+      	char *theWord;
+      	int theCount;
+      } GRAM;
+
+      int length1 = -1;
+      int length2 = -1;
+      GRAM **grams1 = NULL;
+      GRAM **grams2 = NULL;
+
+      //int common(result *one, result *two);
+      //int matches(result *one, result *two);
+      //int contains(const char *c, const result *results);
+      //int processString(const char *c, const int n, result *res);
+      //int my_substr(int from, int to, char* str, char* substr);
+      //double getSimilarity(const char *termOne, const char *termTwo, int n);
+
+      int addGram1(GRAM g){
+      	if(length1 == -1){
+      		length1 = 0;
+      	}else{
+      		length1 += 1;
+      	}
+
+      	void *_tmp = realloc(grams1, (length1 * sizeof(GRAM)));
+      	if (!_tmp)
+      	{
+      		fprintf(stderr, "ERROR: Couldn't realloc memory!\n");
+      		return(-1);
+      	}	grams1 = (GRAM*)_tmp;
+      	*grams1[length1] = g;
+      	return length1;
+      }//addGram1
+
+      int addGram2(GRAM g){
+      	if(length2 == -1){
+      		length2 = 0;
+      	}else{
+      		length2 += 1;
+      	}
+
+      	void *_tmp = realloc(grams2, (length2 * sizeof(GRAM)));
+      	if (!_tmp)
+      	{
+      		fprintf(stderr, "ERROR: Couldn't realloc memory!\n");
+      		return(-1);
+      	}	grams2 = (GRAM*)_tmp;
+      	int s1 = length2;
+      	*grams2[length2] = g;
+      	char *s = *grams2[length2]->theWord;
+      	return length2;
+      }//addGram2
+
+      int common(GRAM one[], GRAM two[]){
+      	//char *s = one[1].theWord;
+      	int res = 0, i, j;
+      	char *word = grams2[1]->theWord;
+      	for(i = 0; i <= length1; i++){
+      		for(j = 0; j <= length2; j++){
+      			char *s = two[j].theWord;
+      			char *m = one[i].theWord;
+      			if(!strcasecmp(one[i].theWord, two[j].theWord)){
+      				res++;
+      			}
+      		}
+      	}
+      	return res;
+      	//return 0;
+      }//end common
+
+      int matches(GRAM one[], GRAM two[]){
+      	int i, j;
+      	for(i = 0; i <= length2; i++){
+      		int index = -1;
+      		int found = 0;
+      		for(j = 0; j < length1 && !found; j++){
+      			if(!strcasecmp(two[i].theWord, one[j].theWord)){
+      				found = 1;
+      			}
+      			index = j;
+      		}
+
+      		if(!found){
+      			one[length1 - 1] = two[index];
+      		}
+      	}
+
+      	return length1;
+      }//end matches
+
+      int contains(const char *c, const GRAM results[]){
+      	int i;
+      	int size = sizeof(results)/sizeof(results[0]);
+      	for(i = 0; i < size; i++){
+      		GRAM s = results[i];
+      		if(s.theWord != '\0'){
+      			if(!strcasecmp(results[i].theWord, c)){
+      				return 1;
+      			 }
+      		}
+      	}
+      	return 0;
+      }//end contains
+
+      int processString(const char *c, const int n, int flag){
+      //	int count = ceil((sizeof(c) / n));
+      	int index = 0;
+      	int i, j, k;
+      //	result r[count];
+      //	res = &r;
+
+      	for(i = 0; i < strlen(c) - 1; i++){
+      		char tmp[n];
+      //		char final[n];
+      		for(j = i, k = 0; j < (i+n); j++){
+      			tmp[k] = c[j];
+      			k++;
+      		}
+      //		final = tmp;
+      		if(flag == 1 && !contains(tmp, grams1)){
+      			//GRAM st_tmp = {"Jo", length1};
+      			GRAM st_tmp = {tmp, length1};
+      			length1 = addGram1(st_tmp);	
+      			//res[index] = &st_tmp;
+      			//res[index]->theWord = "Jo";
+      			//res[index]->theCount = 50;
+      //			//int strlength = strlen(tmp);
+      //			strncpy(*st_tmp.theWord, tmp, strlen(tmp));
+      //			
+      //			st_tmp.theCount = 23;
+      //			result *res_tmp;
+      //			res_tmp = &res[index];
+      //			*res_tmp = st_tmp;
+      		}
+      		if(flag == 2 && !contains(tmp, grams2)){
+      			//GRAM st_tmp = {"Jo", length2};
+      			GRAM st_tmp = {tmp, length2};
+      			length2 = addGram2(st_tmp);	
+      		}
+      	}//for
+      	return 1;
+      }//end processString
+
+      int my_substr(int from, int to, char* str, char* substr){
+      	int i, k;
+
+      	if(to > from){
+      		return 1;
+      	}
+      	int substr_size = (to - from ) + 2;
+      	substr[substr_size];
+      	for(i = from, k = 0; i <= to && k < substr_size; i++){
+      		substr[k] = str[i];
+      		k++;
+      	}  
+      	return 1;
+      }//end my_substr
+
+      const double *getSimilarity(const char *termOne, const char *termTwo, int n){
+      	int count_1 = ceil((strlen(termOne) - n));
+      	int count_2 = ceil((strlen(termTwo) - n));
+      //	int myInt[4];
+      //	//result *res1[count_1];
+      //	result **res1;
+      //	res1 = malloc(((sizeof(char) * n) + sizeof(int)) * count_1);
+      //       //result* res1 = malloc(count_1 * (sizeof(int) + sizeof(result) * n));
+      //	//res1 = malloc(count_1 * sizeof(result));
+      //	result **res2;
+      //	res2 = malloc(((sizeof(char) * n) + sizeof(int)) * count_2);
+      	processString(termOne, n, 1);
+      	processString(termTwo, n, 2);
+      	int c = common(grams1, grams2);
+      	int m = matches(grams1, grams2);
+      	double *sim;
+      	*sim = (double) c / (double) m;
+      	const double *val = sim;
+      	return val;
       }
-      
-      int common(result[] one, result[] two){
-        int res = 0;
-        
-        for(x = 0; x < sizeof(one); x++)
-          {
-            for(x = 0; x < sizeof(two); x++)
-              {
-                
-              }
-          }
+
+      int main (int argc, const char * argv[]) {
+          // insert code here...
+          printf("Hello, World!\n");
+      	double *s = getSimilarity("John", "Johnny", 2);
+      	printf("The Double Is %f", *s);
+          return 0;
       }
-      
+
       '
     end
   end
