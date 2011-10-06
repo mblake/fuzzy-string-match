@@ -354,127 +354,87 @@ double getDistance( char *s1, char *s2 )
     inline :C do |builder|
       #builder.include '<ctypes.h>'
       # builder.          # 
-                builder.include '<vector>'
-                 builder.include '<string>'
-                 builder.include '<math.h>'
-                 builder.add_type_converter("std::vector<std::string>", "", "")
-                 builder.add_type_converter("vecter<string>", "", "")
+      builder.include '<vector>'
+      builder.include '<string>'
+      builder.include '<math.h>'
       builder.add_compile_flags '-x c++', '-lstdc++'
-      builder.c_raw '//
-      //
-      //int common(std::vector<std::string> list1, std::vector<std::string> list2){
-      //    int res = 0, i, j;
-      //    unsigned long length1 = list1.size() - 1;
-      //    unsigned long length2 = list2.size() - 1;
-      //    for(i = 0; i <= length1; i++){
-      //        for(j = 0; j <= length2; j++){
-      //            if(list1[i].compare(list2[j]) != 0){
-      //                res++;
-      //            }
-      //        }
-      //    }
-      //    return res;
-      //    //return 0;
-      //}//end common
+      builder.c_raw 'int dups;
 
       int matches(std::vector<std::string> list1, std::vector<std::string> list2){
-          int i, j;
-          int size1 = list1.size() - 1;
-          int size2 = list2.size() - 1;
-          for(i = 0; i <= size1; i++){
-              int index = -1;
-              int found = 0;
-              for(j = 0; j < size2 && !found; j++){
-                  if(list1[i].compare(list2[j]) != 0){
-                      found = 1;
-                  }
-                  index = j;
-              }
+      	int i, j, x;
+      	int size1 = list1.size() - 1;
+      	int size2 = list2.size() - 1;
+      	std::vector<std::string> matchedList (list1.size() + list2.size());
+      	int counter = 0;
+      	for(i = 0; i <= size1; i++){
+      		int found = 0;
+      		for(j = 0; j <= size2; j++){
+      			if(list1[i].compare(list2[j]) == 0){
+      				int duplicate = 0;
+      			    for(x = 0; x <= matchedList.size() - 1; x++){
+      					if(matchedList[x].compare(list1[i]) == 0 || matchedList[x].compare(list2[j]) == 0){
+      						dups++;
+      						duplicate = true;
+      					}
+      				}
+      				if(!duplicate){
+      					matchedList[counter] = list1[i];
+      					counter++;
+      					found = 1;
+      				}
+      			}
+      		}
 
-              if(!found){
-                  list1[size1 - 1] = list2[index];
-              }
-          }
+      	}
 
-          return size1;
+      	return counter;
       }//end matches
 
-      //int contains(const char *c, const GRAM results[]){
-      //    int i;
-      //    int size = sizeof(results)/sizeof(results[0]);
-      //    for(i = 0; i < size; i++){
-      //        GRAM s = results[i];
-      //        if(s.theWord != ){
-      //            if(!strcasecmp(results[i].theWord, c)){
-      //                return 1;
-      //            }
-      //        }
-      //    }
-      //    return 0;
-      //}//end contains
-
-      int my_substr(int from, int to, char* str, char* substr){
-          int i, k;
-
-          if(to > from){
-              return 1;
-          }
-          int substr_size = (to - from ) + 2;
-          substr[substr_size];
-          for(i = from, k = 0; i <= to && k < substr_size; i++){
-              substr[k] = str[i];
-              k++;
-          }  
-          return 1;
-      }//end my_substr
+      
       '
       builder.c '
+
       double getSimilarity(const char *termOne, const char *termTwo, int n){
-          int count_1 = ceil((strlen(termOne) - n));
-          int count_2 = ceil((strlen(termTwo) - n));
-          std::vector<std::string> list1 (count_1 + 1);
-          std::vector<std::string> list2 (count_2 + 1);
+      	dups = 0;
+      	if(strlen(termOne) < n || strlen(termTwo) < n){
+      		return 0;
+      	}
+      	int count_1 = ceil((strlen(termOne) - n)) + 1;
+      	int count_2 = ceil((strlen(termTwo) - n)) + 1;
+      	std::vector<std::string> list1 (count_1);
+      	std::vector<std::string> list2 (count_2);
 
-          int i, j, k;
-          for(i = 0; i < strlen(termOne) - 1; i++){
-              std::string tmp[1];
-              //        tmp = malloc(sizeof(char) * n);
-              //char final[n];
-              for(j = i, k = 0; j < (i+n); j++){
-                  tmp[0] += termOne[j];
-                  k++;
-              }
+      	int i, j, k;
+      	for(i = 0; i <= strlen(termOne) - n; i++){
+      		std::string tmp[1];
+      		for(j = i, k = 0; j < (i+n); j++){
+      			tmp[0] += termOne[j];
+      			k++;
+      		}
 
-              // *grams1[i].theWord = malloc(100);
-              //        list[i] = malloc(8);
 
-              list1[i] = *tmp;
-          }
-          //    grams1[0].theWord = "Bob";
-          //    grams1[1].theWord = "Jason";
-          //    list2 = malloc(300);
-          for(i = 0; i < strlen(termTwo) - 1; i++){
-              std::string tmp[1];
-              //        tmp = malloc(sizeof(char) * n);
-              //char final[n];
-              for(j = i, k = 0; j < (i+n); j++){
-                  tmp[0] += termTwo[j];
-                  k++;
-              }
+      		list1[i] = *tmp;
+      	}
+      	for(i = 0; i <= strlen(termTwo) - n; i++){
+      		std::string tmp[1];
 
-              // *grams1[i].theWord = malloc(100);
-              //        list[i] = malloc(8);
+      		for(j = i, k = 0; j < (i+n); j++){
+      			tmp[0] += termTwo[j];
+      			k++;
+      		}
 
-              list2[i] = *tmp;
-          }
-      //    int c = common(list1, list2);
-          int m = matches(list1, list2);
-          int termLength = strlen(termOne);
-          float final =  (float) m / (float) (termLength - 1) ;
-          double total = final * 100.0;
-      //    const float *val = &total;
-          return total;
-      }'
+
+      		list2[i] = *tmp;
+      	}
+      	int m = matches(list1, list2);
+      	int termLength = count_1 > count_2 ? count_1 : count_2;
+      	float final =  (float) m / (float) (termLength - dups) ;
+      	double total = final * 100.0;
+      	//    const float *val = &total;
+      	return total;
+      }
+
+      '
     end
   end
 end
