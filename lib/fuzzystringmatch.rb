@@ -358,82 +358,61 @@ double getDistance( char *s1, char *s2 )
       builder.include '<string>'
       builder.include '<math.h>'
       builder.add_compile_flags '-x c++', '-lstdc++'
-      builder.c_raw 'int dups;
+      builder.c_raw '
+      int contains(std::string term, std::vector<std::string> list){
+      	int i;
+          for(i=0; i<list.size(); i++){
+      		if(term.compare(list[i]) == 0){
+      			return 1;
+      		}
+      	}
+      	return 0;
+      }
 
-      int matches(std::vector<std::string> list1, std::vector<std::string> list2){
-      	int i, j, x;
-      	int size1 = list1.size() - 1;
-      	int size2 = list2.size() - 1;
-      	std::vector<std::string> matchedList (list1.size() + list2.size());
-      	int counter = 0;
-      	for(i = 0; i <= size1; i++){
-      		int found = 0;
-      		for(j = 0; j <= size2; j++){
-      			if(list1[i].compare(list2[j]) == 0){
-      				int duplicate = 0;
-      			    for(x = 0; x <= matchedList.size() - 1; x++){
-      					if(matchedList[x].compare(list1[i]) == 0 || matchedList[x].compare(list2[j]) == 0){
-      						dups++;
-      						duplicate = true;
-      					}
-      				}
-      				if(!duplicate){
-      					matchedList[counter] = list1[i];
-      					counter++;
-      					found = 1;
-      				}
-      			}
+      std::vector<std::string> genGrams(const char *term, int n){
+      	std::vector<std::string> list;
+      	int i, j, k;
+      	for(i = 0; i <= strlen(term) - n; i++){
+      		std::string tmp[1];
+      		for(j = i, k = 0; j < (i+n); j++){
+      			tmp[0] += tolower(term[j]);
+      			k++;
       		}
 
+      		if(!contains(*tmp, list)){
+      			list.push_back(*tmp);
+      		}
+
+      	}	
+      	return list;
+      }
+
+      int matches(std::vector<std::string> list1, std::vector<std::string> list2){
+      	int i;
+      	int size1 = list1.size() - 1;
+      	std::vector<std::string> matchedList;
+      	for(i = 0; i <= size1; i++){
+      		if(contains(list1[i], list2)){
+      		  matchedList.push_back(list1[i]);
+      		}
       	}
-
-      	return counter;
+      	return matchedList.size();
       }//end matches
-
-      
       '
       builder.c '
-
       double getSimilarity(const char *termOne, const char *termTwo, int n){
-      	dups = 0;
       	if(strlen(termOne) < n || strlen(termTwo) < n){
       		return 0;
       	}
-      	int count_1 = ceil((strlen(termOne) - n)) + 1;
-      	int count_2 = ceil((strlen(termTwo) - n)) + 1;
-      	std::vector<std::string> list1 (count_1);
-      	std::vector<std::string> list2 (count_2);
+      	std::vector<std::string> list1 = genGrams(termOne, n);
+      	std::vector<std::string> list2 = genGrams(termTwo, n);
 
-      	int i, j, k;
-      	for(i = 0; i <= strlen(termOne) - n; i++){
-      		std::string tmp[1];
-      		for(j = i, k = 0; j < (i+n); j++){
-      			tmp[0] += termOne[j];
-      			k++;
-      		}
-
-
-      		list1[i] = *tmp;
-      	}
-      	for(i = 0; i <= strlen(termTwo) - n; i++){
-      		std::string tmp[1];
-
-      		for(j = i, k = 0; j < (i+n); j++){
-      			tmp[0] += termTwo[j];
-      			k++;
-      		}
-
-
-      		list2[i] = *tmp;
-      	}
       	int m = matches(list1, list2);
-      	int termLength = count_1 > count_2 ? count_1 : count_2;
-      	float final =  (float) m / (float) (termLength - dups) ;
+      	int termLength = list1.size() > list2.size() ? list1.size() : list2.size();
+      	float final =  (float) m / (float) (termLength) ;
       	double total = final * 100.0;
-      	//    const float *val = &total;
       	return total;
       }
-
       '
     end
   end
